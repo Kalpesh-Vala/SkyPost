@@ -37,11 +37,11 @@ class AuthService:
             last_name=user_data.last_name
         )
         
-        # Generate JWT token
-        token = JWTAuth.generate_token(user.id, user.email)
+        # Generate JWT token (user is a dict)
+        token = JWTAuth.generate_token(user['id'], user['email'])
         
         return {
-            "user": user.to_dict(),
+            "user": user,  # user is already a dict
             "token": token,
             "message": "User registered successfully"
         }
@@ -61,21 +61,21 @@ class AuthService:
             raise ValueError("Invalid email or password")
         
         # Check if user is active
-        if not user.is_active:
+        if not user['is_active']:
             raise ValueError("Account is deactivated")
         
         # Verify password
-        if not user.verify_password(login_data.password):
+        if not User.verify_password(login_data.password, user['password_hash']):
             raise ValueError("Invalid email or password")
         
-        # Update last login
-        await user.update_last_login()
+        # Update last login (skip for now, implement later)
+        # await User.update_last_login(user['id'])
         
         # Generate JWT token
-        token = JWTAuth.generate_token(user.id, user.email)
+        token = JWTAuth.generate_token(user['id'], user['email'])
         
         return {
-            "user": user.to_dict(),
+            "user": user,  # user is already a dict
             "token": token,
             "message": "Login successful"
         }

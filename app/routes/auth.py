@@ -36,7 +36,8 @@ async def register(request):
     except ValueError as e:
         return json(*error_response(str(e)))
     except Exception as e:
-        return json(*error_response("Registration failed"))
+        print(f"Registration error: {str(e)}")  # Debug logging
+        return json(*error_response(f"Registration failed: {str(e)}"))
 
 @bp.post('/login')
 async def login(request):
@@ -60,12 +61,28 @@ async def login(request):
     except ValueError as e:
         return json(*error_response(str(e)))
     except Exception as e:
-        return json(*error_response("Login failed"))
+        print(f"Login error: {str(e)}")  # Debug logging
+        return json(*error_response(f"Login failed: {str(e)}"))
 
 @bp.get('/me')
 @jwt_required
 async def get_profile(request):
     """Get current user profile."""
+    try:
+        user_id = request.ctx.user_id
+        result = await AuthService.get_user_profile(user_id)
+        
+        return json(*success_response(result, "Profile retrieved successfully"))
+        
+    except ValueError as e:
+        return json(*error_response(str(e)))
+    except Exception as e:
+        return json(*error_response("Failed to retrieve profile"))
+
+@bp.get('/profile')
+@jwt_required  
+async def get_profile_alias(request):
+    """Get current user profile (alias for /me)."""
     try:
         user_id = request.ctx.user_id
         result = await AuthService.get_user_profile(user_id)

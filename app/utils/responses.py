@@ -3,7 +3,18 @@ Standard API response utilities
 """
 
 from typing import Any, Dict, Optional
+from datetime import datetime
 from sanic.response import JSONResponse
+
+def serialize_datetime(obj: Any) -> Any:
+    """Convert datetime objects to ISO format strings for JSON serialization."""
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {key: serialize_datetime(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [serialize_datetime(item) for item in obj]
+    return obj
 
 def success_response(
     data: Any = None,
@@ -17,7 +28,7 @@ def success_response(
     }
     
     if data is not None:
-        response["data"] = data
+        response["data"] = serialize_datetime(data)
     
     return response, status_code
 
