@@ -3,9 +3,11 @@ Message model using SQLAlchemy Core
 """
 
 from datetime import datetime
+from typing import Optional
 from sqlalchemy import Table, Column, Integer, String, DateTime, Boolean, Text, ForeignKey, select, insert, update, func
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.utils.database import metadata, get_session
+from app.utils.database import metadata, get_session, get_engine
 
 # Define messages table
 messages_table = Table(
@@ -34,7 +36,7 @@ class Message:
     @staticmethod
     async def create_message(sender_id: int, sender_email: str, 
                            recipient_email: str, subject: str, body: str,
-                           recipient_id: int = None, html_body: str = None):
+                           recipient_id: Optional[int] = None, html_body: Optional[str] = None):
         """Create a new message."""
         async with get_session() as session:
             stmt = insert(messages_table).values(
@@ -50,8 +52,11 @@ class Message:
             await session.commit()
             
             # Get the created message
-            message_id = result.inserted_primary_key[0]
-            return await Message.get_by_id_simple(message_id)
+            if result.inserted_primary_key:
+                message_id = result.inserted_primary_key[0]
+                return await Message.get_by_id_simple(message_id)
+            else:
+                raise Exception("Failed to create message")
     
     @staticmethod
     async def get_inbox_messages(user_id: int, page: int = 1, per_page: int = 20):

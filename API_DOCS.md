@@ -14,7 +14,14 @@ SkyPost is a comprehensive email backend microservice built with Sanic, providin
 🚀 **Production Ready** - Database connected, authentication working, API endpoints operational  
 🔐 **Authentication System** - **COMPLETELY FIXED** - All JWT middleware issues resolved  
 ✅ **Protected Endpoints** - Profile GET/PUT and password change working perfectly  
+🛠️ **Profile Update API** - **RECENTLY FIXED** - Now includes proper validation and error handling  
 🧪 **Fully Tested** - Comprehensive test suite validates all functionality
+
+### Recent Updates (September 15, 2025)
+- ✅ **Fixed Profile Update API** - Resolved database transaction issues and method call errors
+- ✅ **Added Input Validation** - Comprehensive validation for all profile fields with clear error messages  
+- ✅ **Improved Error Handling** - Better debugging and user-friendly error responses
+- ✅ **Enhanced Documentation** - Updated with complete validation rules and examples
 
 ---
 
@@ -143,19 +150,26 @@ SkyPost is a comprehensive email backend microservice built with Sanic, providin
 
 ### Update Profile
 - **PUT** `/auth/profile` or `/auth/me`
-- **Description**: Update current user profile
+- **Description**: Update current user profile information
 - **Authentication**: Required (JWT Bearer token)
 - **Headers**: `Authorization: Bearer <token>`
-- **Status**: ✅ **WORKING** - Profile updates functioning correctly
+- **Status**: ✅ **WORKING** - Profile updates functioning correctly with validation
 - **Body**: 
   ```json
   {
     "first_name": "Updated Name",
     "last_name": "Updated Last",
-    "bio": "My updated bio"
+    "bio": "My updated bio",
+    "profile_picture": "https://example.com/profile.jpg"
   }
   ```
-- **Response**: 
+- **Validation Rules**:
+  - `first_name`: Optional, minimum 2 characters if provided
+  - `last_name`: Optional, minimum 2 characters if provided  
+  - `bio`: Optional, maximum 500 characters
+  - `profile_picture`: Optional, maximum 500 characters (URL)
+  - All fields are optional - only provided fields will be updated
+- **Success Response** (200):
   ```json
   {
     "success": true,
@@ -166,16 +180,44 @@ SkyPost is a comprehensive email backend microservice built with Sanic, providin
       "first_name": "Updated Name",
       "last_name": "Updated Last",
       "bio": "My updated bio",
+      "profile_picture": "https://example.com/profile.jpg",
       "is_active": true,
       "is_verified": false,
       "created_at": "2025-08-29T18:21:28.909000",
-      "updated_at": "2025-08-29T19:00:00.000000",
-      "last_login": null,
-      "profile_picture": null
+      "updated_at": "2025-09-15T12:10:47.706390",
+      "last_login": null
     }
   }
   ```
-  }
+- **Error Responses**:
+  - **400** - Validation Error:
+    ```json
+    {
+      "success": false,
+      "message": "Validation error: Name must be at least 2 characters long"
+    }
+    ```
+  - **400** - No Fields to Update:
+    ```json
+    {
+      "success": false,
+      "message": "No valid fields to update"
+    }
+    ```
+  - **401** - Unauthorized:
+    ```json
+    {
+      "success": false,
+      "message": "Authentication required"
+    }
+    ```
+  - **404** - User Not Found:
+    ```json
+    {
+      "success": false,
+      "message": "User not found"
+    }
+    ```
   ```
 
 ### Change Password
@@ -336,14 +378,31 @@ TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
 curl -X GET http://localhost:8000/auth/profile \
   -H "Authorization: Bearer $TOKEN"
 
-# Update Profile (✅ WORKING)
+# Update Profile (✅ WORKING - Recently Fixed with Validation)
 curl -X PUT http://localhost:8000/auth/profile \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "first_name": "Updated John",
     "last_name": "Updated Doe",
-    "bio": "My updated profile bio"
+    "bio": "My updated profile bio with more details",
+    "profile_picture": "https://example.com/profile.jpg"
+  }'
+
+# Update Profile (Partial Update - Only specific fields)
+curl -X PUT http://localhost:8000/auth/profile \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bio": "Just updating my bio"
+  }'
+
+# Alternative endpoint (same functionality)
+curl -X PUT http://localhost:8000/auth/me \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "first_name": "Alternative Update"
   }'
 
 # Change Password (✅ WORKING - Recently Fixed)
@@ -356,7 +415,54 @@ curl -X PUT http://localhost:8000/auth/change-password \
   }'
 ```
 
-### 2. Send and Manage Messages
+### 2. Profile Management Examples
+```bash
+# Update all profile fields
+curl -X PUT http://localhost:8000/auth/profile \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "first_name": "John",
+    "last_name": "Smith",
+    "bio": "Software developer passionate about building great applications",
+    "profile_picture": "https://example.com/avatars/john-smith.jpg"
+  }'
+
+# Partial update (only bio)
+curl -X PUT http://localhost:8000/auth/profile \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bio": "Updated bio only"
+  }'
+
+# Update using alternative endpoint
+curl -X PUT http://localhost:8000/auth/me \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "first_name": "Johnny"
+  }'
+
+# Example validation errors
+# This will return 400 error (name too short)
+curl -X PUT http://localhost:8000/auth/profile \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "first_name": "J"
+  }'
+
+# This will return 400 error (bio too long)
+curl -X PUT http://localhost:8000/auth/profile \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bio": "'$(python3 -c "print('x' * 600)")'"
+  }'
+```
+
+### 3. Send and Manage Messages
 ```bash
 # Send Message
 curl -X POST http://localhost:8000/mail/send \

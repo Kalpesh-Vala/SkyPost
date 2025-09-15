@@ -4,10 +4,12 @@ Authentication routes
 
 from sanic import Blueprint
 from sanic.response import json
+from pydantic import ValidationError
 
 from app.services.auth_service import AuthService
 from app.middleware.auth import jwt_required
 from app.utils.responses import success_response, error_response
+from app.utils.validation import UserProfileUpdateSchema
 
 # Create authentication blueprint
 bp = Blueprint('auth', url_prefix='/auth')
@@ -102,10 +104,16 @@ async def update_profile(request):
         user_id = request.ctx.user_id
         data = request.json or {}
         
-        # Extract updateable fields
+        # Validate input data
+        try:
+            validated_data = UserProfileUpdateSchema(**data)
+        except ValidationError as e:
+            return json(*error_response(f"Validation error: {str(e)}"))
+        
+        # Extract non-None values for update
         update_data = {
-            key: value for key, value in data.items() 
-            if key in ['first_name', 'last_name', 'bio', 'profile_picture'] and value is not None
+            key: value for key, value in validated_data.dict().items() 
+            if value is not None
         }
         
         if not update_data:
@@ -118,6 +126,7 @@ async def update_profile(request):
     except ValueError as e:
         return json(*error_response(str(e)))
     except Exception as e:
+        print(f"Profile update error: {str(e)}")  # Add logging for debugging
         return json(*error_response("Failed to update profile"))
 
 @bp.put('/profile')
@@ -128,10 +137,16 @@ async def update_profile_alias(request):
         user_id = request.ctx.user_id
         data = request.json or {}
         
-        # Extract updateable fields
+        # Validate input data
+        try:
+            validated_data = UserProfileUpdateSchema(**data)
+        except ValidationError as e:
+            return json(*error_response(f"Validation error: {str(e)}"))
+        
+        # Extract non-None values for update
         update_data = {
-            key: value for key, value in data.items() 
-            if key in ['first_name', 'last_name', 'bio', 'profile_picture'] and value is not None
+            key: value for key, value in validated_data.dict().items() 
+            if value is not None
         }
         
         if not update_data:
@@ -144,6 +159,7 @@ async def update_profile_alias(request):
     except ValueError as e:
         return json(*error_response(str(e)))
     except Exception as e:
+        print(f"Profile update error: {str(e)}")  # Add logging for debugging
         return json(*error_response("Failed to update profile"))
 
 @bp.post('/change-password')

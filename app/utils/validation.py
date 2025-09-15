@@ -30,6 +30,31 @@ class UserLoginSchema(BaseModel):
     email: EmailStr
     password: str
 
+class UserProfileUpdateSchema(BaseModel):
+    """User profile update validation schema."""
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    bio: Optional[str] = None
+    profile_picture: Optional[str] = None
+    
+    @validator('first_name', 'last_name')
+    def validate_names(cls, v):
+        if v is not None and len(v.strip()) < 2:
+            raise ValueError('Name must be at least 2 characters long')
+        return v.strip() if v else v
+    
+    @validator('bio')
+    def validate_bio(cls, v):
+        if v is not None and len(v) > 500:
+            raise ValueError('Bio cannot exceed 500 characters')
+        return v
+    
+    @validator('profile_picture')
+    def validate_profile_picture(cls, v):
+        if v is not None and len(v) > 500:
+            raise ValueError('Profile picture URL cannot exceed 500 characters')
+        return v
+
 class MessageSchema(BaseModel):
     """Message creation validation schema."""
     to_email: EmailStr

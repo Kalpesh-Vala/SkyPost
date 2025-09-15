@@ -38,6 +38,9 @@ class AuthService:
             last_name=user_data.last_name
         )
         
+        if not user:
+            raise ValueError("Failed to create user")
+        
         # Generate JWT token (user is a dict)
         token = JWTAuth.generate_token(user['id'], user['email'])
         
@@ -88,7 +91,7 @@ class AuthService:
         if not user:
             raise ValueError("User not found")
         
-        return serialize_datetime(user)  # Serialize datetime fields
+        return User.to_dict(user)  # Remove sensitive fields
     
     @staticmethod
     async def update_user_profile(user_id: int, **kwargs) -> dict:
@@ -102,12 +105,21 @@ class AuthService:
         update_data = {k: v for k, v in kwargs.items() if k in allowed_fields and v is not None}
         
         if update_data:
-            await user.update(**update_data).apply()
-        
-        return {
-            "user": user.to_dict(),
-            "message": "Profile updated successfully"
-        }
+            # Add updated_at timestamp
+            from datetime import datetime
+            update_data['updated_at'] = datetime.utcnow()
+            
+            # Use the User.update_user method
+            await User.update_user(user_id, **update_data)
+            
+            # Get the updated user data
+            updated_user = await User.get_by_id(user_id)
+            if not updated_user:
+                raise ValueError("Failed to retrieve updated user")
+                
+            return User.to_dict(updated_user)
+        else:
+            return User.to_dict(user)
     
     @staticmethod
     async def change_password(user_id: int, current_password: str, new_password: str) -> dict:

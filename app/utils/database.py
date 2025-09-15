@@ -2,8 +2,7 @@
 Database connection and utilities using modern SQLAlchemy async
 """
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy import MetaData
 from config.settings import config
 
@@ -23,7 +22,7 @@ async def init_db():
             database_url = database_url.replace('postgresql://', 'postgresql+asyncpg://')
         
         engine = create_async_engine(database_url, echo=config.APP_DEBUG)
-        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        async_session = async_sessionmaker(engine, expire_on_commit=False)
         
         print(f"🔗 Connected to database: {config.DB_NAME}")
     except Exception as e:
@@ -75,7 +74,7 @@ async def drop_tables():
         print(f"❌ Failed to drop tables: {str(e)}")
         raise
 
-def get_session():
+def get_session() -> AsyncSession:
     """Get database session."""
     if async_session:
         return async_session()
