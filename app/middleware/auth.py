@@ -60,12 +60,12 @@ def jwt_required(f):
             
             # Get user from database
             user = await User.get_by_id(payload['user_id'])
-            if not user or not user.is_active:
+            if not user or not user['is_active']:
                 return json(*error_response("User not found or inactive", status_code=401))
             
             # Add user to request context
             request.ctx.user = user
-            request.ctx.user_id = user.id
+            request.ctx.user_id = user['id']
             
         except ValueError as e:
             return json(*error_response(str(e), status_code=401))
@@ -90,9 +90,9 @@ def optional_jwt(f):
                 payload = JWTAuth.decode_token(token)
                 
                 user = await User.get_by_id(payload['user_id'])
-                if user and user.is_active:
+                if user and user['is_active']:
                     request.ctx.user = user
-                    request.ctx.user_id = user.id
+                    request.ctx.user_id = user['id']
         except:
             # If token is invalid, just proceed without authentication
             pass

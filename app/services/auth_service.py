@@ -6,6 +6,7 @@ from datetime import datetime
 from app.models.user import User
 from app.middleware.auth import JWTAuth
 from app.utils.validation import UserRegistrationSchema, UserLoginSchema
+from app.utils.responses import serialize_datetime
 
 class AuthService:
     """Service class for authentication operations."""
@@ -41,7 +42,7 @@ class AuthService:
         token = JWTAuth.generate_token(user['id'], user['email'])
         
         return {
-            "user": user,  # user is already a dict
+            "user": serialize_datetime(user),  # Serialize datetime fields
             "token": token,
             "message": "User registered successfully"
         }
@@ -75,7 +76,7 @@ class AuthService:
         token = JWTAuth.generate_token(user['id'], user['email'])
         
         return {
-            "user": user,  # user is already a dict
+            "user": serialize_datetime(user),  # Serialize datetime fields
             "token": token,
             "message": "Login successful"
         }
@@ -87,10 +88,7 @@ class AuthService:
         if not user:
             raise ValueError("User not found")
         
-        return {
-            "user": user.to_dict(),
-            "message": "Profile retrieved successfully"
-        }
+        return serialize_datetime(user)  # Serialize datetime fields
     
     @staticmethod
     async def update_user_profile(user_id: int, **kwargs) -> dict:
@@ -119,16 +117,16 @@ class AuthService:
             raise ValueError("User not found")
         
         # Verify current password
-        if not user.verify_password(current_password):
+        if not User.verify_password(current_password, user['password_hash']):
             raise ValueError("Current password is incorrect")
         
         # Validate new password
         if len(new_password) < 8:
             raise ValueError("New password must be at least 8 characters long")
         
-        # Update password
+        # Update password (implement the update method)
         new_password_hash = User.hash_password(new_password)
-        await user.update(password_hash=new_password_hash).apply()
+        await User.update_password(user_id, new_password_hash)
         
         return {
             "message": "Password changed successfully"

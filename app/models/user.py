@@ -102,6 +102,19 @@ class User:
             await session.commit()
     
     @staticmethod
+    async def update_password(user_id: int, new_password_hash: str):
+        """Update user password."""
+        async with get_session() as session:
+            stmt = update(users_table).where(
+                users_table.c.id == user_id
+            ).values(
+                password_hash=new_password_hash,
+                updated_at=datetime.utcnow()
+            )
+            await session.execute(stmt)
+            await session.commit()
+    
+    @staticmethod
     def to_dict(user_data: dict, exclude_fields=None):
         """Convert user data to dictionary, excluding sensitive fields by default."""
         exclude_fields = exclude_fields or ['password_hash']

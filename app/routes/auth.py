@@ -120,6 +120,32 @@ async def update_profile(request):
     except Exception as e:
         return json(*error_response("Failed to update profile"))
 
+@bp.put('/profile')
+@jwt_required  
+async def update_profile_alias(request):
+    """Update current user profile (alias for /me)."""
+    try:
+        user_id = request.ctx.user_id
+        data = request.json or {}
+        
+        # Extract updateable fields
+        update_data = {
+            key: value for key, value in data.items() 
+            if key in ['first_name', 'last_name', 'bio', 'profile_picture'] and value is not None
+        }
+        
+        if not update_data:
+            return json(*error_response("No valid fields to update"))
+        
+        result = await AuthService.update_user_profile(user_id, **update_data)
+        
+        return json(*success_response(result, "Profile updated successfully"))
+        
+    except ValueError as e:
+        return json(*error_response(str(e)))
+    except Exception as e:
+        return json(*error_response("Failed to update profile"))
+
 @bp.post('/change-password')
 @jwt_required
 async def change_password(request):
