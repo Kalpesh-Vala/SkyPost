@@ -60,6 +60,7 @@ class MessageSchema(BaseModel):
     to_email: EmailStr
     subject: str
     body: str
+    message_type: Optional[str] = "email"
     
     @validator('subject')
     def validate_subject(cls, v):
@@ -74,6 +75,12 @@ class MessageSchema(BaseModel):
         if len(v.strip()) < 1:
             raise ValueError('Message body cannot be empty')
         return v.strip()
+    
+    @validator('message_type')
+    def validate_message_type(cls, v):
+        if v not in ["email", "notification", "internal"]:
+            raise ValueError('Message type must be one of: email, notification, internal')
+        return v
 
 class MessageQuerySchema(BaseModel):
     """Message query validation schema."""

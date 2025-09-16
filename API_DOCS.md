@@ -259,7 +259,48 @@ SkyPost is a comprehensive email backend microservice built with Sanic, providin
     "message_type": "email"
   }
   ```
+- **Validation Rules**:
+  - `to_email`: Required, valid email format
+  - `subject`: Required, non-empty, maximum 200 characters
+  - `body`: Required, non-empty
+  - `message_type`: Optional (defaults to "email"), valid values: "email", "notification", "internal"
 - **File Upload**: Support multipart/form-data for attachments
+- **Success Response** (201):
+  ```json
+  {
+    "success": true,
+    "message": "Message sent successfully",
+    "data": {
+        "message": {
+            "id": 11,
+            "sender_id": 4,
+            "recipient_id": 3,
+            "sender_email": "user1@example.com",
+            "recipient_email": "user@example.com",
+            "subject": "Hello World",
+            "body": "This is the message content",
+            "created_at": "2025-09-16T17:52:34.475691"
+        },
+        "attachments": [],
+        "message_text": "Message sent successfully"
+    }
+  }
+  ```
+- **Error Responses**:
+  - **400** - Validation Error:
+    ```json
+    {
+      "success": false,
+      "message": "Validation error: to_email, subject, and body are required"
+    }
+    ```
+  - **401** - Unauthorized:
+    ```json
+    {
+      "success": false,
+      "message": "Authentication required"
+    }
+    ```
 
 ### Get Inbox
 - **GET** `/mail/inbox`

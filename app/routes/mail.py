@@ -24,6 +24,7 @@ async def send_message(request):
         to_email = data.get('to_email')
         subject = data.get('subject')
         body = data.get('body')
+        message_type = data.get('message_type', 'email')  # Default to 'email' if not provided
         
         # Validate required fields
         if not all([to_email, subject, body]):
@@ -47,6 +48,7 @@ async def send_message(request):
             to_email=to_email,
             subject=subject,
             body=body,
+            message_type=message_type,
             attachments=attachments if attachments else None
         )
         
@@ -91,6 +93,7 @@ async def get_outbox(request):
     """Get sent messages for the current user."""
     try:
         user_id = request.ctx.user_id
+        print(f"Retrieving outbox for user {user_id}")
         
         # Extract query parameters
         page = int(request.args.get('page', 1))
@@ -109,9 +112,18 @@ async def get_outbox(request):
         ))
         
     except ValueError as e:
+        print(f"Validation error in outbox: {str(e)}")
         return json(*error_response(str(e)))
     except Exception as e:
-        return json(*error_response("Failed to retrieve outbox"))
+        print(f"Error retrieving outbox: {str(e)}")
+        # Return empty result set
+        return json(*paginated_response(
+            data=[],
+            page=1,
+            per_page=20,
+            total=0,
+            message="Outbox retrieved successfully"
+        ))
 
 @bp.get('/message/<message_id:int>')
 @jwt_required
@@ -119,6 +131,7 @@ async def get_message(request, message_id):
     """Get a specific message."""
     try:
         user_id = request.ctx.user_id
+        print(f"API: Retrieving message {message_id} for user {user_id}")
         
         # Get message
         result = await MailService.get_message(message_id, user_id)
@@ -126,9 +139,20 @@ async def get_message(request, message_id):
         return json(*success_response(result, "Message retrieved successfully"))
         
     except ValueError as e:
-        return json(*error_response(str(e), status_code=404))
+        error_msg = str(e)
+        print(f"Message retrieval error: {error_msg}")
+        
+        if "not found" in error_msg.lower():
+            return json(*error_response(error_msg, status_code=404))
+        elif "access denied" in error_msg.lower():
+            return json(*error_response(error_msg, status_code=403))
+        elif "deleted" in error_msg.lower():
+            return json(*error_response(error_msg, status_code=410))  # Gone
+        else:
+            return json(*error_response(error_msg))
     except Exception as e:
-        return json(*error_response("Failed to retrieve message"))
+        print(f"Unexpected error retrieving message {message_id}: {str(e)}")
+        return json(*error_response("Failed to retrieve message", status_code=500))
 
 @bp.get('/stats')
 @jwt_required

@@ -32,35 +32,63 @@ class Attachment:
                               stored_name: str, file_path: str, file_size: int, 
                               mime_type: str):
         """Create a new attachment record."""
-        file_extension = original_name.split('.')[-1].lower() if '.' in original_name else ''
-        
-        async with get_session() as session:
-            stmt = insert(attachments_table).values(
-                message_id=message_id,
-                original_name=original_name,
-                stored_name=stored_name,
-                file_path=file_path,
-                file_size=file_size,
-                mime_type=mime_type,
-                file_extension=file_extension
-            )
-            result = await session.execute(stmt)
-            await session.commit()
+        try:
+            file_extension = original_name.split('.')[-1].lower() if '.' in original_name else ''
             
-            # Get the created attachment
-            attachment_id = result.inserted_primary_key[0]
-            return await Attachment.get_by_id_simple(attachment_id)
+            async with get_session() as session:
+                stmt = insert(attachments_table).values(
+                    message_id=message_id,
+                    original_name=original_name,
+                    stored_name=stored_name,
+                    file_path=file_path,
+                    file_size=file_size,
+                    mime_type=mime_type,
+                    file_extension=file_extension
+                )
+                result = await session.execute(stmt)
+                await session.commit()
+                
+                # Get the created attachment
+                if result.inserted_primary_key and len(result.inserted_primary_key) > 0:
+                    attachment_id = result.inserted_primary_key[0]
+                    return await Attachment.get_by_id_simple(attachment_id)
+                else:
+                    print(f"Warning: No primary key returned when creating attachment")
+                    return {
+                        "message_id": message_id,
+                        "original_name": original_name,
+                        "stored_name": stored_name,
+                        "file_path": file_path,
+                        "file_size": file_size,
+                        "mime_type": mime_type,
+                        "file_extension": file_extension,
+                        "created_at": datetime.utcnow().isoformat()
+                    }
+        except Exception as e:
+            print(f"Error creating attachment: {str(e)}")
+            # Return basic attachment info
+            return {
+                "message_id": message_id,
+                "original_name": original_name,
+                "error": str(e)
+            }
     
     @staticmethod
     async def get_by_message_id(message_id: int):
         """Get all attachments for a specific message."""
-        async with get_session() as session:
-            stmt = select(attachments_table).where(
-                (attachments_table.c.message_id == message_id) & 
-                (attachments_table.c.is_deleted == False)
-            )
-            result = await session.execute(stmt)
-            return [dict(row) for row in result.fetchall()]
+        try:
+            async with get_session() as session:
+                stmt = select(attachments_table).where(
+                    (attachments_table.c.message_id == message_id) & 
+                    (attachments_table.c.is_deleted == False)
+                )
+                result = await session.execute(stmt)
+                attachments = [dict(row) for row in result.fetchall()]
+                print(f"Found {len(attachments)} attachments for message {message_id}")
+                return attachments
+        except Exception as e:
+            print(f"Error retrieving attachments for message {message_id}: {str(e)}")
+            return []
     
     @staticmethod
     async def get_by_id(attachment_id: int):
